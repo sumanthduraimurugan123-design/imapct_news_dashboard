@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Impact Alerts & News</title>
+  <link rel="shortcut icon" href="#">
+</head>
+<body style="font-family: Arial, sans-serif; padding: 20px; max-width: 800px; margin: auto;">
+
+  <!-- Language Selection -->
+  <div style="margin-bottom: 15px;">
+    <label for="langSelect"><strong>Select Language:</strong> </label>
+    <select id="langSelect" onchange="fetchPersonalizedNews()">
+      <option value="en-IN">English (India)</option>
+      <option value="hi-IN">Hindi (हिंदी)</option>
+      <option value="ta-IN">Tamil (தமிழ்)</option>
+    </select>
+  </div>
+
+  <!-- Category Selection -->
+  <div style="margin-bottom: 25px;">
+    <label for="categorySelect"><strong>Select Category:</strong> </label>
+    <select id="categorySelect" onchange="toggleSubDropdowns()">
+      <option value="all">All Categories</option>
+      <option value="student">Student</option>
+      <option value="working_professional">Working Professional</option>
+      <option value="illiterate_community">Voice Help (Non-Literate Users)</option>
+    </select>
+
+    <!-- Student Sub-Types -->
+    <span id="studentSubWrapper" style="display: none; margin-left: 15px;">
+      <label for="studentTypeSelect"><strong>Type:</strong> </label>
+      <select id="studentTypeSelect" onchange="fetchPersonalizedNews()">
+        <option value="school_student">School Student</option>
+        <option value="engineering_student">Engineering Student</option>
+        <option value="arts_student">Arts & Humanities</option>
+        <option value="medical_student">Medical Student</option>
+      </select>
+    </span>
+
+    <!-- Professional Sub-Types -->
+    <span id="profSubWrapper" style="display: none; margin-left: 15px;">
+      <label for="profTypeSelect"><strong>Field:</strong> </label>
+      <select id="profTypeSelect" onchange="fetchPersonalizedNews()">
+        <option value="it_professional">Software & IT</option>
+        <option value="finance_professional">Finance & Banking</option>
+        <option value="marketing_professional">Marketing & Media</option>
+        <option value="healthcare_professional">Healthcare & Pharma</option>
+      </select>
+    </span>
+
+    <!-- Non-Literate Sub-Types -->
+    <span id="illiterateSubWrapper" style="display: none; margin-left: 15px;">
+      <label for="illiterateTypeSelect"><strong>Role:</strong> </label>
+      <select id="illiterateTypeSelect" onchange="fetchPersonalizedNews()">
+        <option value="farmer">Farmer / Agriculture</option>
+        <option value="daily_wager">Daily Wage / Construction</option>
+        <option value="artisan_handicraft">Artisan / Handicraft</option>
+        <option value="street_vendor">Street Vendor / Trader</option>
+      </select>
+    </span>
+  </div>
+
+  <!-- Voice Controls & Auto-Alerts -->
+  <div style="margin: 20px 0;">
+    <button id="voiceBtn" onclick="startVoiceSearch()" style="padding: 10px 20px; font-size: 16px; cursor: pointer; border-radius: 20px; background-color: #28a745; color: white; border: none;">
+      🎙️ Tap & Speak Your Role
+    </button>
+    <button id="stopVoiceBtn" onclick="stopVoiceSearchManual()" style="padding: 10px 20px; font-size: 16px; cursor: pointer; border-radius: 20px; background-color: #ffc107; color: black; border: none; margin-left: 10px; display: none;">
+      ⏹️ Done Speaking / Search
+    </button>
+    <button id="stopAudioBtn" onclick="stopAudio()" style="padding: 10px 20px; font-size: 16px; cursor: pointer; border-radius: 20px; background-color: #dc3545; color: white; border: none; margin-left: 10px;">
+      🔇 Stop Speaking
+    </button>
+    <button onclick="requestAlertPermission()" style="padding: 10px 20px; font-size: 16px; cursor: pointer; border-radius: 20px; background-color: #17a2b8; color: white; border: none; margin-left: 10px;">
+      🔔 Turn On Auto-Alerts
+    </button>
+  </div>
+
+  <!-- News Section -->
+  <div class="news-section">
+    <h2>Personalized Live News</h2>
+    <div id="newsContainer">
+      <p>Loading news...</p>
+    </div>
+  </div>
+
+  <script>
+    var QUERY_MAP = {
+      "en-IN": {
+        "all": "latest news India",
+        "farmer": "farmers agriculture crop price monsoon government schemes India",
+        "daily_wager": "daily wage laborers construction workers MGNREGA wages India",
+        "artisan_handicraft": "handicraft artisans weavers Vishwakarma scheme India",
+        "street_vendor": "street vendors PM Svanidhi scheme local trade India",
+        "school_student": "school education CBSE board exams India",
+        "engineering_student": "software engineering tech artificial intelligence India",
+        "arts_student": "arts humanities journalism media India",
+        "medical_student": "NEET medical college doctors healthcare India",
+        "it_professional": "software developers IT industry tech jobs India",
+        "finance_professional": "banking finance stock market corporate economy India",
+        "marketing_professional": "digital marketing media advertising brand strategy India",
+        "healthcare_professional": "healthcare industry pharma hospitals doctors India"
+      },
+      "hi-IN": {
+        "all": "मुख्य समाचार भारत",
+        "farmer": "किसान कृषि फसल योजना मानसून भारत",
+        "daily_wager": "दैनिक मजदूर मनरेगा निर्माण कार्य भारत",
+        "artisan_handicraft": "हस्तशिल्प कारीगर विश्वकर्मा योजना भारत",
+        "street_vendor": "रेहड़ी पटरी पीएम स्वनिधि योजना व्यापार",
+        "school_student": "स्कूली शिक्षा सीबीएसई बोर्ड परीक्षा भारत",
+        "engineering_student": "इंजीनियरिंग टेक सॉफ्टवेयर भारत",
+        "arts_student": "कला पत्रकारिता मीडिया भारत",
+        "medical_student": "नीट मेडिकल कॉलेज डॉक्टर स्वास्थ्य",
+        "it_professional": "आईटी उद्योग सॉफ्टवेयर जॉब्स भारत",
+        "finance_professional": "बैंकिंग वित्त शेयर बाजार अर्थव्यवस्था",
+        "marketing_professional": "डिजिटल मार्केटिंग मीडिया विज्ञापन भारत",
+        "healthcare_professional": "स्वास्थ्य सेवा अस्पताल फार्मा भारत"
+      },
+      "ta-IN": {
+        "all": "முக்கிய செய்திகள் தமிழ்நாடு",
+        "farmer": "விவசாயி வேளாண்மை பயிர் திட்டம் தமிழ்நாடு",
+        "daily_wager": "கூலித் தொழிலாளர்கள் கட்டுமானப் பணி100 நாள் வேலை",
+        "artisan_handicraft": "கைவினைஞர்கள் நெசவாளர்கள் அரசு உதவி",
+        "street_vendor": "வீதி வியாபாரிகள் சிறு வணிகம் கடன் உதவி",
+        "school_student": "பள்ளி கல்வித் துறை தேர்வு முடிவுகள் தமிழ்நாடு",
+        "engineering_student": "பொறியியல் கல்லூரி வேலைவாய்ப்பு தொழில்நுட்பம்",
+        "arts_student": "கலை மற்றும் அறிவியல் கல்லூரி செய்திகள்",
+        "medical_student": "நீட் தேர்வு மருத்துவக் கல்லூரி செய்திகள்",
+        "it_professional": "ஐடி துறை மென்பொருள் வேலைவாய்ப்பு தமிழ்நாடு",
+        "finance_professional": "வங்கி சேவை நிதித் துறை பங்குச் சந்தை",
+        "marketing_professional": "டிஜிட்டல் மார்க்கெட்டிங் விளம்பரம் தமிழ்நாடு",
+        "healthcare_professional": "மருத்துவத் துறை மருத்துவமனை செய்திகள்"
+      }
+    };
+
+    function getSelectedLang() {
+      return document.getElementById("langSelect").value;
+    }
+
+    function toggleSubDropdowns() {
+      var cat = document.getElementById("categorySelect").value;
+      document.getElementById("studentSubWrapper").style.display = (cat === "student") ? "inline" : "none";
+      document.getElementById("profSubWrapper").style.display = (cat === "working_professional") ? "inline" : "none";
+      document.getElementById("illiterateSubWrapper").style.display = (cat === "illiterate_community") ? "inline" : "none";
+      fetchPersonalizedNews();
+    }
+
+    function speakText(text) {
+      stopAudio();
+      if (!('speechSynthesis' in window)) return;
+
+      var selectedLang = getSelectedLang();
+      var utterance = new SpeechSynthesisUtterance(text);
+      utterance.lang = selectedLang;
+      utterance.rate = 0.9;
+
+      var voices = window.speechSynthesis.getVoices();
+      var langPrefix = selectedLang.split('-')[0];
+      var matchedVoice = voices.find(function(v) {
+        return v.lang.replace('_', '-').toLowerCase().startsWith(langPrefix);
+      });
+
+      if (matchedVoice) utterance.voice = matchedVoice;
+      window.speechSynthesis.speak(utterance);
+    }
+
+    function stopAudio() {
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.cancel();
+      }
+    }
+
+    function requestAlertPermission() {
+      if (!("Notification" in window)) {
+        alert("This browser does not support desktop notifications.");
+        return;
+      }
+
+      Notification.requestPermission().then(function (permission) {
+        if (permission === "granted") {
+          alert("Auto-alerts enabled successfully!");
+          new Notification("Impact Alerts Enabled", {
+            body: "You will receive automatic regional news updates here.",
+            icon: "https://cdn-icons-png.flaticon.com/512/3233/3233483.png"
+          });
+        } else {
+          alert("Permission denied. Check browser settings.");
+        }
+      });
+    }
+
+    // Real-time SSE listener explicitly pointing to port 8000
+    function initNewsStream() {
+      const eventSource = new EventSource("http://127.0.0.1:8000/news-stream");
+      
+      eventSource.onmessage = function(event) {
+        const data = JSON.parse(event.data);
+        if (Notification.permission === "granted") {
+          new Notification("🔔 Live News Alert: " + data.title, {
+            body: data.description.replace(/<[^>]*>?/gm, ''),
+            icon: "https://cdn-icons-png.flaticon.com/512/3233/3233483.png"
+          });
+        }
+      };
+    }
+
+    var activeRecognition = null;
+    var globalTranscript = "";
+
+    function startVoiceSearch() {
+      var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      if (!SpeechRecognition) {
+        alert("Voice recognition requires Google Chrome browser.");
+        return;
+      }
+
+      activeRecognition = new SpeechRecognition();
+      var lang = getSelectedLang();
+
+      activeRecognition.lang = lang;
+      activeRecognition.continuous = true;
+      activeRecognition.interimResults = true;
+
+      var container = document.getElementById("newsContainer");
+      var voiceBtn = document.getElementById("voiceBtn");
+      var stopVoiceBtn = document.getElementById("stopVoiceBtn");
+
+      voiceBtn.style.display = "none";
+      stopVoiceBtn.style.display = "inline-block";
+      globalTranscript = "";
+
+      activeRecognition.onresult = function(event) {
+        var interimTranscript = "";
+        for (var i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            globalTranscript += event.results[i][0].transcript + " ";
+          } else {
+            interimTranscript += event.results[i][0].transcript;
+          }
+        }
+        container.innerHTML = "<p>Listening... <em>\"" + (globalTranscript + interimTranscript) + "\"</em></p>";
+      };
+
+      activeRecognition.onend = function() {
+        voiceBtn.style.display = "inline-block";
+        stopVoiceBtn.style.display = "none";
+        var queryText = globalTranscript.trim();
+        if (queryText.length > 0) {
+          fetchCustomVoiceNews(queryText);
+        }
+      };
+
+      try {
+        activeRecognition.start();
+      } catch(e) {
+        console.log("Recognition error", e);
+      }
+    }
+
+    function stopVoiceSearchManual() {
+      if (activeRecognition) {
+        activeRecognition.stop();
+      }
+    }
+
+    function fetchCustomVoiceNews(queryText) {
+      var container = document.getElementById("newsContainer");
+      var lang = getSelectedLang();
+      container.innerHTML = "<p>Searching news for: <strong>" + queryText + "</strong>...</p>";
+
+      fetch("http://127.0.0.1:8000/news?category=" + encodeURIComponent(queryText) + "&lang=" + lang)
+        .then(function(res) { return res.json(); })
+        .then(function(data) { renderArticles(data.articles || []); })
+        .catch(function() { container.innerHTML = "<p>Error loading news.</p>"; });
+    }
+
+    function fetchPersonalizedNews() {
+      var mainCat = document.getElementById("categorySelect").value;
+      var lang = getSelectedLang();
+      var key = mainCat;
+
+      if (mainCat === "student") {
+        key = document.getElementById("studentTypeSelect").value;
+      } else if (mainCat === "working_professional") {
+        key = document.getElementById("profTypeSelect").value;
+      } else if (mainCat === "illiterate_community") {
+        key = document.getElementById("illiterateTypeSelect").value;
+      }
+
+      var langMap = QUERY_MAP[lang] || QUERY_MAP["en-IN"];
+      var actualQuery = langMap[key] || key;
+
+      var container = document.getElementById("newsContainer");
+      container.innerHTML = "<p>Loading news...</p>";
+
+      fetch("http://127.0.0.1:8000/news?category=" + encodeURIComponent(actualQuery) + "&lang=" + lang)
+        .then(function(res) { return res.json(); })
+        .then(function(data) { renderArticles(data.articles || []); })
+        .catch(function() { container.innerHTML = "<p>Failed to connect to backend.</p>"; });
+    }
+
+    function renderArticles(articles) {
+      var container = document.getElementById("newsContainer");
+      container.innerHTML = "";
+
+      if (!articles || articles.length === 0) {
+        container.innerHTML = "<p>No news found for this category.</p>";
+        return;
+      }
+
+      for (var i = 0; i < articles.length; i++) {
+        var item = articles[i];
+        var title = item.title || "No Title";
+        var desc = item.description || "No description available.";
+        var speech = (title + ". " + desc).replace(/["']/g, "");
+
+        var cardHtml = '<div style="border: 1px solid #ddd; padding: 15px; margin-bottom: 15px; border-radius: 8px; background-color: #fdfdfd;">' +
+          '<h3 style="margin-top:0;">' + title + '</h3>' +
+          '<p>' + desc + '</p>' +
+          '<button onclick="speakText(\'' + speech + '\')" style="padding: 8px 16px; background-color: #007bff; color: white; border: none; border-radius: 5px; cursor: pointer;">🔊 Listen News</button>' +
+          '<a href="' + item.url + '" target="_blank" style="margin-left: 15px; color: #007bff; text-decoration: none;">Read Full Article</a>' +
+          '</div>';
+        container.innerHTML += cardHtml;
+      }
+    }
+
+    if ('speechSynthesis' in window) {
+      window.speechSynthesis.onvoiceschanged = function() {
+        window.speechSynthesis.getVoices();
+      };
+    }
+
+    document.addEventListener("DOMContentLoaded", function() {
+      fetchPersonalizedNews();
+      initNewsStream();
+    });
+  </script>
+</body>
+</html>

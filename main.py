@@ -34,6 +34,16 @@ def get_news(
             "title": f"Emerging Trends and Opportunities in {subcategory}",
             "description": f"Critical updates affecting workflow, daily protocols, and advancement guidelines for {role.capitalize()} paths.",
             "url": "https://news.google.com/search?q=" + clean_sub.replace(" ", "+")
+        },
+        {
+            "title": f"Global Expert Panel Releases New Guidelines for {subcategory}",
+            "description": f"Major announcements impacting daily operations and future standards across {role} sectors.",
+            "url": "https://news.google.com"
+        },
+        {
+            "title": f"Top Skills and Resources Required for {subcategory} in 2026",
+            "description": f"A comprehensive breakdown of tools, training, and certifications recommended for {role} growth.",
+            "url": "https://news.google.com"
         }
     ]
 

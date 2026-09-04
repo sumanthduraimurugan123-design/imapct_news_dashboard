@@ -1,6 +1,5 @@
 from fastapi import FastAPI, Query
 from fastapi.middleware.cors import CORSMiddleware
-import requests
 
 app = FastAPI()
 
@@ -12,25 +11,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.get("/")
+def home():
+    return {"message": "Impact News Dashboard API is running successfully!"}
+
 @app.get("/news")
 def get_news(
     role: str = Query("student", description="User role"),
     subcategory: str = Query("School Student", description="Specific subcategory filter"),
     lang: str = Query("en-IN", description="Language code")
 ):
-    # Construct a precise search query string combining role and subcategory
     clean_sub = subcategory.lower().strip()
     query_term = f"{role} {clean_sub}"
 
-    # If you are using a live news provider API key, plug it in here:
-    # NEWS_API_KEY = "your_actual_api_key"
-    # url = f"https://newsapi.org/v2/everything?q={encodeURIComponent(query_term)}&language=en&sortBy=publishedAt&apiKey={NEWS_API_KEY}"
-    # response = requests.get(url)
-    # data = response.json()
-    # if "articles" in data and data["articles"]:
-    #     return {"articles": data["articles"]}
-
-    # Fallback to customized dynamic articles matching the exact chosen subcategory
     personalized_articles = [
         {
             "title": f"Live Updates for {subcategory}: Key Industry & Policy Briefs",
